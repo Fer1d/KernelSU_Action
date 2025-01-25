@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       KernelSU_URL:
-        description: "KernelSU地址"
+        description: "默认KernelSU-Next链接"
         required: true
         default: 'https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh'
       KernelSU_TAG:
