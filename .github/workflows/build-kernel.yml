@@ -3,9 +3,14 @@ on:
   workflow_dispatch:
     inputs:
       KernelSU_URL:
-        description: "KernelSU链接"
+        description: "KernelSU地址"
         required: true
-        default: ''      
+        default: 'https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh'
+      KernelSU_TAG:
+        description: "分支"
+        required: true
+
+
 jobs:
   build:
     name: Build Kernel by ${{ github.actor }}
@@ -207,7 +212,7 @@ jobs:
       if: env.ENABLE_KERNELSU == 'true'
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
-        "${{ github.event.inputs.KernelSU_URL }}"
+        curl -LSs "${{ github.event.inputs.KernelSU_URL }}" | bash -s ${{ github.event.inputs.KernelSU_TAG }}
         KSU_VERSION=$(cd KernelSU && expr $(/usr/bin/git rev-list --count HEAD) + 10200)
         echo "UPLOADNAME=-KernelSU_$KSU_VERSION" >> $GITHUB_ENV
 
