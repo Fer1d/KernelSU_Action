@@ -9,6 +9,8 @@ on:
       KernelSU_TAG:
         description: "分支"
         required: true
+        default: 'v1.0.'
+
 
 
 jobs:
@@ -213,7 +215,7 @@ jobs:
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
         curl -LSs "${{ github.event.inputs.KernelSU_URL }}" | bash -s ${{ github.event.inputs.KernelSU_TAG }}
-        KSU_VERSION=$(cd KernelSU && expr $(/usr/bin/git rev-list --count HEAD) + 10200)
+        KSU_VERSION=$(cd KernelSU-Next && expr $(/usr/bin/git rev-list --count HEAD) + 10200)
         echo "UPLOADNAME=-KernelSU_$KSU_VERSION" >> $GITHUB_ENV
 
     - name: Setup Configuration for Kernel
