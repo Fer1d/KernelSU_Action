@@ -212,15 +212,17 @@ apply_patch() {
 		warn "$(basename "$patch") is already applied, skipping"
 		return 0
 	fi
-	# Last resort: let patch do its fuzzy best and report what it rejected.
-	if patch -p"$strip" --force --fuzz=3 --no-backup-if-mismatch <"$patch"; then
+	# Last resort: let patch do its fuzzy best, but only after proving that the
+	# entire patch applies.  Applying first and checking the exit code leaves
+	# successfully matched hunks in the tree when a later hunk rejects; callers
+	# then run their fallback against a half-patched (and often uncompilable)
+	# source file.
+	if patch -p"$strip" --dry-run --force --fuzz=3 --silent <"$patch" >/dev/null 2>&1; then
+		patch -p"$strip" --force --fuzz=3 --no-backup-if-mismatch <"$patch" >/dev/null
 		warn "$(basename "$patch") applied with fuzz; verify the result"
 		return 0
 	fi
 	warn "failed to apply $(basename "$patch")"
-	find . -name '*.rej' -newer "$patch" -print 2>/dev/null | while read -r rej; do
-		warn "  reject: ${rej}"
-	done
 	return 1
 }
 

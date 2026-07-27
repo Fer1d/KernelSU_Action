@@ -134,8 +134,24 @@ ksu_install() {
 	local link="${KERNEL_DIR}/drivers/kernelsu"
 	[ -e "$link" ] || die "drivers/kernelsu symlink was not created"
 
-	grep -q 'kernelsu' "${KERNEL_DIR}/drivers/Makefile" \
-		|| die "drivers/Makefile was not wired up for kernelsu"
+	# setup.sh only checks whether the word "kernelsu" already appears.  Some
+	# vendor trees carry an obsolete line guarded by CONFIG_WITH_KERNEL_SU, so
+	# setup.sh reports success without adding the CONFIG_KSU rule and the final
+	# link fails with every ksu_handle_* symbol undefined.  Normalize any stale
+	# rule to the symbol declared by the installed Kconfig.
+	local driver_makefile="${KERNEL_DIR}/drivers/Makefile"
+	if ! grep -qE '^[[:space:]]*obj-\$\(CONFIG_KSU\)[[:space:]]*\+=[[:space:]]*kernelsu/?[[:space:]]*$' "$driver_makefile"; then
+		if grep -qE '^[[:space:]]*obj-\$\(CONFIG_[A-Z0-9_]+\)[[:space:]]*\+=[[:space:]]*kernelsu/?[[:space:]]*$' "$driver_makefile"; then
+			sed -i -E 's@^[[:space:]]*obj-\$\(CONFIG_[A-Z0-9_]+\)[[:space:]]*\+=[[:space:]]*kernelsu/?[[:space:]]*$@obj-$(CONFIG_KSU) += kernelsu/@' "$driver_makefile"
+			warn "normalized stale drivers/Makefile KernelSU guard to CONFIG_KSU"
+		else
+			printf '\nobj-$(CONFIG_KSU) += kernelsu/\n' >>"$driver_makefile"
+			warn "added missing CONFIG_KSU rule to drivers/Makefile"
+		fi
+	fi
+
+	grep -qE '^[[:space:]]*obj-\$\(CONFIG_KSU\)[[:space:]]*\+=[[:space:]]*kernelsu/?[[:space:]]*$' "$driver_makefile" \
+		|| die "drivers/Makefile was not wired to CONFIG_KSU for kernelsu"
 	grep -q 'drivers/kernelsu/Kconfig' "${KERNEL_DIR}/drivers/Kconfig" \
 		|| die "drivers/Kconfig was not wired up for kernelsu"
 
@@ -226,8 +242,15 @@ ksu_hook_configs() {
 	manual)
 		case "$variant" in
 			kernelsu-next)  kconf_enable "$defconfig" CONFIG_KSU_MANUAL_HOOK ;;
-			sukisu-ultra | resukisu)
+			sukisu-ultra)
 				kconf_enable "$defconfig" CONFIG_KSU_MANUAL_HOOK ;;
+			resukisu)
+				# ReSukiSU's non-GKI static export check requires the complete
+				# kallsyms table unless every internal SELinux symbol is exported
+				# manually by the vendor tree.
+				kconf_set_many "$defconfig" \
+					CONFIG_KSU_MANUAL_HOOK=y CONFIG_DEBUG_KERNEL=y \
+					CONFIG_KALLSYMS=y CONFIG_KALLSYMS_ALL=y ;;
 			*) : ;;  # tiann/KernelSU 0.9.x infers manual hooks from the source patch
 		esac
 		;;

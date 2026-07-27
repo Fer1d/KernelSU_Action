@@ -109,6 +109,14 @@ build_kernel() {
 	export KBUILD_BUILD_HOST=${KBUILD_BUILD_HOST:-Github-Action}
 	export KBUILD_BUILD_USER=${KBUILD_BUILD_USER:-kernelsu-action}
 
+	# DISABLE_LTO is this action's boolean configuration switch, but several
+	# Android kernel trees use the same Make variable for compiler flags (for
+	# example, "-fno-lto").  Leaving our value in the environment makes a
+	# non-LTO build invoke `clang ... false ...`, treating "false" as an input
+	# file.  prepare_defconfig() has already consumed the action setting, so let
+	# Kbuild own the name from this point on.
+	unset DISABLE_LTO
+
 	# Custom manager signature, when the user builds their own manager APK.
 	if [ -n "${KSU_EXPECTED_SIZE:-}" ] && [ -n "${KSU_EXPECTED_HASH:-}" ]; then
 		export KSU_EXPECTED_SIZE KSU_EXPECTED_HASH
